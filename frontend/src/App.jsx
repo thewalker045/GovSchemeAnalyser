@@ -1,28 +1,48 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Navbar from "./components/Navbar";
-import Home from "./pages/Home";
-import ApplyScheme from "./pages/ApplyScheme";
-import MyApplications from "./pages/MyApplications";
+import { ProtectedRoute, AdminRoute } from "./components/ProtectedRoute";
+
 import Login from "./pages/Login";
-import AdminDashboard from "./pages/AdminDashboard";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
-
-
+import Home from "./pages/Home";
+import MyApplications from "./pages/MyApplications";
+import AdminDashboard from "./pages/AdminDashboard";
 
 function App() {
   return (
     <BrowserRouter>
-      <Navbar />
-
       <Routes>
-        <Route path="/admin-dashboard" element={<AdminDashboard />} />
-        <Route path="/my-applications" element={<MyApplications />} />
-        <Route path="/apply/:schemeId" element={<ApplyScheme />} />
-        <Route path="/" element={<Home />} />
+
+        {/* Public routes */}
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/dashboard" element={<Dashboard />} />
+
+        {/* Citizen only routes */}
+        <Route path="/dashboard" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/" element={
+          <ProtectedRoute>
+            <Home />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/my-applications" element={
+          <ProtectedRoute>
+            <MyApplications />
+          </ProtectedRoute>
+        } />
+
+        {/* Admin only route */}
+        <Route path="/admin-dashboard" element={
+          <AdminRoute>
+            <AdminDashboard />
+          </AdminRoute>
+        } />
+
       </Routes>
     </BrowserRouter>
   );

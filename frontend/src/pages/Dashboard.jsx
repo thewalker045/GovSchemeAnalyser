@@ -1,12 +1,28 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { logout, getUser } from "../utils/auth";
 
 function Dashboard() {
   const navigate = useNavigate();
-  const [applications] = useState(
-  JSON.parse(localStorage.getItem("govconnectApplications")) || []
-);
+  const [applications, setApplications] = useState([]);
+  const user = getUser();
+
+  useEffect(() => {
+    // If not logged in, redirect to login
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    // Load applications from localStorage
+    const stored = JSON.parse(localStorage.getItem("govconnectApplications")) || [];
+    setApplications(stored);
+  }, []);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   const totalApplications = applications.length;
   const submittedApplications = applications.filter(
@@ -17,8 +33,8 @@ function Dashboard() {
   ).length;
   const latestApplication = applications[0];
 
-  const userName = latestApplication?.applicantName || "Citizen User";
-  const userState = latestApplication?.state || "Delhi";
+  const userName = user?.fullName || "Citizen User";
+  const userState = user?.state || latestApplication?.state || "India";
 
   const stats = [
     {
@@ -73,12 +89,13 @@ function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[#050816] text-white relative overflow-hidden">
+
+      {/* Background blobs */}
       <motion.div
         animate={{ x: [0, 80, 0], y: [0, 50, 0] }}
         transition={{ duration: 12, repeat: Infinity }}
         className="absolute top-[-130px] left-[-130px] w-96 h-96 bg-cyan-500/20 blur-3xl rounded-full"
       />
-
       <motion.div
         animate={{ x: [0, -80, 0], y: [0, 70, 0] }}
         transition={{ duration: 14, repeat: Infinity }}
@@ -86,6 +103,8 @@ function Dashboard() {
       />
 
       <div className="relative z-10 px-6 sm:px-10 lg:px-14 py-10">
+
+        {/* HEADER */}
         <motion.div
           initial={{ opacity: 0, y: 35 }}
           animate={{ opacity: 1, y: 0 }}
@@ -96,7 +115,6 @@ function Dashboard() {
               Welcome,{" "}
               <span className="text-cyan-400">{userName}</span>
             </h1>
-
             <p className="text-gray-400 mt-3 max-w-2xl">
               This dashboard is personalized according to your applications,
               state, eligibility details, and submitted scheme activity.
@@ -110,16 +128,22 @@ function Dashboard() {
             >
               Browse Schemes
             </button>
-
             <button
               onClick={() => navigate("/my-applications")}
               className="px-5 py-3 rounded-lg bg-gradient-to-r from-cyan-500 to-purple-600 font-semibold"
             >
               My Applications
             </button>
+            <button
+              onClick={handleLogout}
+              className="px-5 py-3 rounded-lg bg-red-500/20 border border-red-500/30 hover:bg-red-500/30 text-red-400 transition font-semibold"
+            >
+              Logout
+            </button>
           </div>
         </motion.div>
 
+        {/* STATS */}
         <div className="grid sm:grid-cols-2 xl:grid-cols-4 gap-5 mt-10">
           {stats.map((item, index) => (
             <motion.div
@@ -130,20 +154,18 @@ function Dashboard() {
               whileHover={{ y: -8, scale: 1.02 }}
               className="bg-[#0b1020]/90 border border-white/10 rounded-2xl p-6 backdrop-blur-2xl shadow-2xl"
             >
-              <div
-                className={`w-14 h-1 rounded-full bg-gradient-to-r ${item.color} mb-5`}
-              />
-
+              <div className={`w-14 h-1 rounded-full bg-gradient-to-r ${item.color} mb-5`} />
               <p className="text-sm text-gray-400">{item.title}</p>
-
               <h2 className="text-3xl font-bold mt-2">{item.value}</h2>
-
               <p className="text-xs text-gray-500 mt-2">{item.detail}</p>
             </motion.div>
           ))}
         </div>
 
+        {/* LATEST APPLICATION + USER PROFILE */}
         <div className="grid xl:grid-cols-[1.4fr_1fr] gap-6 mt-8">
+
+          {/* Latest Application */}
           <motion.div
             initial={{ opacity: 0, x: -35 }}
             animate={{ opacity: 1, x: 0 }}
@@ -165,7 +187,6 @@ function Dashboard() {
                       {latestApplication.ministry}
                     </p>
                   </div>
-
                   <span className="text-sm font-bold text-cyan-400">
                     {latestApplication.status}
                   </span>
@@ -174,31 +195,20 @@ function Dashboard() {
                 <div className="grid sm:grid-cols-3 gap-3 mt-5">
                   <div className="bg-[#111827] rounded-lg p-3 border border-white/10">
                     <p className="text-xs text-gray-400">Application ID</p>
-                    <h4 className="text-sm font-bold mt-1">
-                      {latestApplication.id}
-                    </h4>
+                    <h4 className="text-sm font-bold mt-1">{latestApplication.id}</h4>
                   </div>
-
                   <div className="bg-[#111827] rounded-lg p-3 border border-white/10">
                     <p className="text-xs text-gray-400">Annual Income</p>
-                    <h4 className="text-sm font-bold mt-1">
-                      Rs. {latestApplication.income}
-                    </h4>
+                    <h4 className="text-sm font-bold mt-1">Rs. {latestApplication.income}</h4>
                   </div>
-
                   <div className="bg-[#111827] rounded-lg p-3 border border-white/10">
                     <p className="text-xs text-gray-400">Submitted On</p>
-                    <h4 className="text-sm font-bold mt-1">
-                      {latestApplication.submittedOn}
-                    </h4>
+                    <h4 className="text-sm font-bold mt-1">{latestApplication.submittedOn}</h4>
                   </div>
                 </div>
 
                 <div className="mt-6">
-                  <p className="text-sm font-semibold mb-3">
-                    Verification Progress
-                  </p>
-
+                  <p className="text-sm font-semibold mb-3">Verification Progress</p>
                   <div className="w-full h-3 bg-gray-800 rounded-full overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
@@ -207,7 +217,6 @@ function Dashboard() {
                       className="h-full bg-gradient-to-r from-cyan-400 to-purple-500"
                     />
                   </div>
-
                   <p className="text-xs text-gray-400 mt-3">
                     Current step: {latestApplication.nextStep}
                   </p>
@@ -229,6 +238,7 @@ function Dashboard() {
             )}
           </motion.div>
 
+          {/* User Profile */}
           <motion.div
             initial={{ opacity: 0, x: 35 }}
             animate={{ opacity: 1, x: 0 }}
@@ -240,24 +250,18 @@ function Dashboard() {
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-400 to-purple-600 flex items-center justify-center text-2xl font-bold">
                 {userName.charAt(0).toUpperCase()}
               </div>
-
               <div>
                 <h3 className="font-semibold">{userName}</h3>
                 <p className="text-sm text-gray-400">{userState}, India</p>
-                <p className="text-xs text-emerald-400 mt-1">
-                  Citizen profile active
-                </p>
+                <p className="text-xs text-emerald-400 mt-1">Citizen profile active</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3 mt-6">
               <div className="bg-white/5 border border-white/10 rounded-lg p-4">
                 <p className="text-xs text-gray-400">Applications</p>
-                <h3 className="text-2xl font-bold mt-1">
-                  {totalApplications}
-                </h3>
+                <h3 className="text-2xl font-bold mt-1">{totalApplications}</h3>
               </div>
-
               <div className="bg-white/5 border border-white/10 rounded-lg p-4">
                 <p className="text-xs text-gray-400">State</p>
                 <h3 className="text-2xl font-bold mt-1">{userState}</h3>
@@ -271,10 +275,32 @@ function Dashboard() {
                 pending steps, and recommended schemes.
               </p>
             </div>
+
+            {/* Account Details */}
+            <div className="mt-4 p-4 rounded-xl bg-white/5 border border-white/10">
+              <p className="text-xs text-gray-400 mb-3">Account Details</p>
+              <div className="space-y-2">
+                <div className="flex justify-between">
+                  <span className="text-xs text-gray-400">Email</span>
+                  <span className="text-xs text-white font-semibold">{user?.email}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-gray-400">Role</span>
+                  <span className="text-xs text-cyan-400 font-semibold capitalize">{user?.role}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-xs text-gray-400">User ID</span>
+                  <span className="text-xs text-white font-semibold">{user?.userId}</span>
+                </div>
+              </div>
+            </div>
           </motion.div>
         </div>
 
+        {/* RECOMMENDED SCHEMES + ACTION CENTER */}
         <div className="grid xl:grid-cols-2 gap-6 mt-8">
+
+          {/* Recommended Schemes */}
           <motion.div
             initial={{ opacity: 0, y: 35 }}
             animate={{ opacity: 1, y: 0 }}
@@ -301,12 +327,8 @@ function Dashboard() {
                         {scheme.category} • Income limit {scheme.incomeLimit}
                       </p>
                     </div>
-
-                    <span className="text-sm font-bold text-cyan-400">
-                      {scheme.match}
-                    </span>
+                    <span className="text-sm font-bold text-cyan-400">{scheme.match}</span>
                   </div>
-
                   <div className="w-full h-2 bg-gray-800 rounded-full mt-4 overflow-hidden">
                     <motion.div
                       initial={{ width: 0 }}
@@ -320,6 +342,7 @@ function Dashboard() {
             </div>
           </motion.div>
 
+          {/* Action Center */}
           <motion.div
             initial={{ opacity: 0, y: 35 }}
             animate={{ opacity: 1, y: 0 }}
@@ -358,16 +381,20 @@ function Dashboard() {
                 </p>
               </div>
 
-              <div className="bg-white/5 border border-white/10 rounded-xl p-5">
-                <div className="w-12 h-1 rounded-full bg-gradient-to-r from-amber-400 to-orange-600 mb-4" />
-                <h3 className="font-semibold">Office</h3>
+              <button
+                onClick={handleLogout}
+                className="text-left bg-red-500/10 hover:bg-red-500/20 border border-red-500/20 rounded-xl p-5 transition"
+              >
+                <div className="w-12 h-1 rounded-full bg-gradient-to-r from-red-400 to-rose-600 mb-4" />
+                <h3 className="font-semibold text-red-400">Logout</h3>
                 <p className="text-xs text-gray-400 mt-2">
-                  Connaught Place, New Delhi - 110001
+                  Sign out of your GovConnect account.
                 </p>
-              </div>
+              </button>
             </div>
           </motion.div>
         </div>
+
       </div>
     </div>
   );
