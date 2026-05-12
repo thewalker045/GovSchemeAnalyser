@@ -1,4 +1,59 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import API_URL from "../config";
+import { getToken, logout } from "../utils/auth";
+
 function AdminDashboard() {
+  const navigate = useNavigate();
+  const [stats, setStats] = useState({
+    totalSchemes: 0,
+    totalApplications: 0,
+    approvedApplications: 0,
+    pendingApplications: 0,
+  });
+  const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchStats();
+    fetchApplications();
+  }, []);
+
+  const fetchStats = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/admin/stats`, {
+        headers: {
+          "Authorization": `Bearer ${getToken()}`,
+        },
+      });
+      const data = await res.json();
+      setStats(data);
+    } catch (err) {
+      console.error("Failed to fetch stats:", err);
+    }
+  };
+
+  const fetchApplications = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/admin/applications`, {
+        headers: {
+          "Authorization": `Bearer ${getToken()}`,
+        },
+      });
+      const data = await res.json();
+      setApplications(data.slice(0, 5)); // Show only recent 5
+    } catch (err) {
+      console.error("Failed to fetch applications:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
+
   return (
     <div className="min-h-screen bg-slate-900 text-white p-6">
 
@@ -8,7 +63,7 @@ function AdminDashboard() {
           Admin Dashboard
         </h1>
 
-        <button className="bg-red-500 px-4 py-2 rounded hover:bg-red-600">
+        <button onClick={handleLogout} className="bg-red-500 px-4 py-2 rounded hover:bg-red-600">
           Logout
         </button>
       </div>
@@ -19,21 +74,21 @@ function AdminDashboard() {
         <div className="bg-slate-800 p-6 rounded-xl shadow-lg">
           <h2 className="text-gray-400">Total Schemes</h2>
           <p className="text-3xl font-bold text-cyan-400 mt-2">
-            120+
+            {stats.totalSchemes}+
           </p>
         </div>
 
         <div className="bg-slate-800 p-6 rounded-xl shadow-lg">
           <h2 className="text-gray-400">Applications</h2>
           <p className="text-3xl font-bold text-purple-400 mt-2">
-            5,420
+            {stats.totalApplications}
           </p>
         </div>
 
         <div className="bg-slate-800 p-6 rounded-xl shadow-lg">
           <h2 className="text-gray-400">Approved Users</h2>
           <p className="text-3xl font-bold text-green-400 mt-2">
-            4,980
+            {stats.approvedApplications}
           </p>
         </div>
 
@@ -57,31 +112,18 @@ function AdminDashboard() {
           </thead>
 
           <tbody>
-
-            <tr className="border-b border-slate-700">
-              <td className="p-3">Rahul Sharma</td>
-              <td className="p-3">Free Laptop Scheme</td>
-              <td className="p-3 text-yellow-400">Pending</td>
-            </tr>
-
-            <tr className="border-b border-slate-700">
-              <td className="p-3">Anjali Verma</td>
-              <td className="p-3">Healthcare Support</td>
-              <td className="p-3 text-green-400">Approved</td>
-            </tr>
-
-            <tr>
-              <td className="p-3">Rohit Kumar</td>
-              <td className="p-3">Farmer Subsidy</td>
-              <td className="p-3 text-red-400">Rejected</td>
-            </tr>
-
+            {applications.map((app) => (
+              <tr key={app.application_id} className="border-b border-slate-700">
+                <td className="p-3">{app.user_name}</td>
+                <td className="p-3">{app.scheme_name}</td>
+                <td className="p-3 text-yellow-400">{app.status}</td>
+              </tr>
+            ))}
           </tbody>
 
         </table>
       </div>
     </div>
   );
-}
 
 export default AdminDashboard;

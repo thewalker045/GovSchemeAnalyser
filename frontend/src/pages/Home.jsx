@@ -1,10 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import API_URL from "../config";
+import { getToken } from "../utils/auth";
 
 function Home() {
   const navigate = useNavigate();
   const [selectedScheme, setSelectedScheme] = useState(null);
+  const [schemes, setSchemes] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [income, setIncome] = useState("");
   const [formData, setFormData] = useState({
     fullName: "",
@@ -13,80 +17,21 @@ function Home() {
     state: "",
   });
 
-  const schemes = [
-    {
-      id: 1,
-      name: "PM Scholarship Support",
-      ministry: "Ministry of Education",
-      category: "Education",
-      benefit: "Financial support up to Rs. 25,000 for eligible students.",
-      incomeLimit: 250000,
-      documents: ["Aadhaar Card", "Income Certificate", "Student ID"],
-      deadline: "30 June 2026",
-      processing: "7 to 15 days",
-      color: "from-cyan-500 to-blue-600",
-    },
-    {
-      id: 2,
-      name: "Ayushman Bharat Health Card",
-      ministry: "Ministry of Health",
-      category: "Healthcare",
-      benefit: "Health insurance support for eligible families.",
-      incomeLimit: 300000,
-      documents: ["Aadhaar Card", "Ration Card", "Address Proof"],
-      deadline: "Open all year",
-      processing: "5 to 10 days",
-      color: "from-emerald-500 to-teal-600",
-    },
-    {
-      id: 3,
-      name: "Housing Assistance Scheme",
-      ministry: "Ministry of Housing",
-      category: "Housing",
-      benefit: "Housing support for low-income families.",
-      incomeLimit: 200000,
-      documents: ["Aadhaar Card", "Income Certificate", "Residence Proof"],
-      deadline: "15 August 2026",
-      processing: "15 to 30 days",
-      color: "from-purple-500 to-fuchsia-600",
-    },
-    {
-      id: 4,
-      name: "Digital Skill Development",
-      ministry: "Skill India Mission",
-      category: "Employment",
-      benefit: "Free digital training and job assistance.",
-      incomeLimit: 500000,
-      documents: ["Aadhaar Card", "Education Certificate"],
-      deadline: "Open all year",
-      processing: "3 to 7 days",
-      color: "from-amber-500 to-orange-600",
-    },
-    {
-      id: 5,
-      name: "Women Entrepreneurship Grant",
-      ministry: "Ministry of Women and Child Development",
-      category: "Business",
-      benefit: "Startup assistance for women entrepreneurs.",
-      incomeLimit: 400000,
-      documents: ["Aadhaar Card", "Business Plan", "Bank Details"],
-      deadline: "20 September 2026",
-      processing: "20 to 35 days",
-      color: "from-pink-500 to-rose-600",
-    },
-    {
-      id: 6,
-      name: "Senior Citizen Pension",
-      ministry: "Social Welfare Department",
-      category: "Pension",
-      benefit: "Monthly pension support for eligible senior citizens.",
-      incomeLimit: 180000,
-      documents: ["Aadhaar Card", "Age Proof", "Income Certificate"],
-      deadline: "Open all year",
-      processing: "10 to 20 days",
-      color: "from-indigo-500 to-violet-600",
-    },
-  ];
+  useEffect(() => {
+    fetchSchemes();
+  }, []);
+
+  const fetchSchemes = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/schemes`);
+      const data = await res.json();
+      setSchemes(data);
+    } catch (err) {
+      console.error("Failed to fetch schemes:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const openApply = (scheme) => {
     setSelectedScheme(scheme);
@@ -105,43 +50,44 @@ function Home() {
     });
   };
 
-  const submitApplication = (e) => {
+  const submitApplication = async (e) => {
     e.preventDefault();
 
     const yearlyIncome = Number(income);
 
-    if (yearlyIncome > selectedScheme.incomeLimit) {
-      alert(
-        `Not Eligible! Your income is above the eligibility limit of Rs. ${selectedScheme.incomeLimit}.`
-      );
-      return;
+    setLoading(true);
+    try {
+      const res = await fetch(`${API_URL}/api/applications`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${getToken()}`,
+        },
+        body: JSON.stringify({
+          schemeId: selectedScheme.scheme_id,
+          applicantName: formData.fullName,
+          phone: formData.phone,
+          aadhaar: formData.aadhaar,
+          state: formData.state,
+          income: yearlyIncome,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.message || "Application submission failed.");
+        return;
+      }
+
+      alert("Application submitted successfully!");
+      navigate("/my-applications");
+    } catch (err) {
+      console.error("Submit application error:", err);
+      alert("Cannot connect to server. Please try again.");
+    } finally {
+      setLoading(false);
     }
-
-    const newApplication = {
-      id: `GC-${Date.now()}`,
-      schemeName: selectedScheme.name,
-      category: selectedScheme.category,
-      ministry: selectedScheme.ministry,
-      applicantName: formData.fullName,
-      phone: formData.phone,
-      aadhaar: formData.aadhaar,
-      state: formData.state,
-      income: yearlyIncome,
-      status: "Submitted",
-      submittedOn: new Date().toLocaleDateString(),
-      nextStep: "Document verification pending",
-    };
-
-    const oldApplications =
-      JSON.parse(localStorage.getItem("govconnectApplications")) || [];
-
-    localStorage.setItem(
-      "govconnectApplications",
-      JSON.stringify([newApplication, ...oldApplications])
-    );
-
-    alert("Application submitted successfully!");
-    navigate("/my-applications");
   };
 
   return (
@@ -186,7 +132,7 @@ function Home() {
         <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-5 mt-10">
           {schemes.map((scheme, index) => (
             <motion.div
-              key={scheme.id}
+              key={scheme.scheme_id}
               initial={{ opacity: 0, y: 35 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.08 }}
@@ -336,7 +282,7 @@ function Home() {
               <div className="bg-white/5 border border-white/10 rounded-lg p-4 text-sm text-gray-300">
                 Eligibility income limit for this scheme is{" "}
                 <span className="text-cyan-400 font-bold">
-                  Rs. {selectedScheme.incomeLimit}
+                  Rs. {selectedScheme.income_limit}
                 </span>
                 .
               </div>

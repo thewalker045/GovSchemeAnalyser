@@ -1,12 +1,33 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import API_URL from "../config";
+import { getToken } from "../utils/auth";
 
 function MyApplications() {
   const navigate = useNavigate();
-  const [applications] = useState(
-  JSON.parse(localStorage.getItem("govconnectApplications")) || []
-);
+  const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchApplications();
+  }, []);
+
+  const fetchApplications = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/applications`, {
+        headers: {
+          "Authorization": `Bearer ${getToken()}`,
+        },
+      });
+      const data = await res.json();
+      setApplications(data);
+    } catch (err) {
+      console.error("Failed to fetch applications:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
 
   const getStatusColor = (status) => {
@@ -75,7 +96,7 @@ function MyApplications() {
           <div className="grid lg:grid-cols-2 gap-6 mt-10">
             {applications.map((app, index) => (
               <motion.div
-                key={app.id}
+                key={app.application_id}
                 initial={{ opacity: 0, y: 35 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.08 }}
@@ -88,7 +109,7 @@ function MyApplications() {
                       {app.category}
                     </p>
                     <h2 className="text-xl font-bold mt-2">
-                      {app.schemeName}
+                      {app.scheme_name}
                     </h2>
                     <p className="text-sm text-gray-400 mt-1">
                       {app.ministry}
@@ -107,20 +128,20 @@ function MyApplications() {
                 <div className="grid sm:grid-cols-2 gap-3 mt-5">
                   <div className="bg-white/5 border border-white/10 rounded-lg p-3">
                     <p className="text-xs text-gray-400">Application ID</p>
-                    <h3 className="text-sm font-bold mt-1">{app.id}</h3>
+                    <h3 className="text-sm font-bold mt-1">GC-{app.application_id}</h3>
                   </div>
 
                   <div className="bg-white/5 border border-white/10 rounded-lg p-3">
                     <p className="text-xs text-gray-400">Submitted On</p>
                     <h3 className="text-sm font-bold mt-1">
-                      {app.submittedOn}
+                      {new Date(app.submitted_on).toLocaleDateString()}
                     </h3>
                   </div>
 
                   <div className="bg-white/5 border border-white/10 rounded-lg p-3">
                     <p className="text-xs text-gray-400">Applicant</p>
                     <h3 className="text-sm font-bold mt-1">
-                      {app.applicantName}
+                      {app.applicant_name}
                     </h3>
                   </div>
 

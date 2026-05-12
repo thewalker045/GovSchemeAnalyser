@@ -2,22 +2,38 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { logout, getUser } from "../utils/auth";
+import API_URL from "../config";
+import { getToken } from "../utils/auth";
 
 function Dashboard() {
   const navigate = useNavigate();
   const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
   const user = getUser();
 
   useEffect(() => {
-    // If not logged in, redirect to login
     if (!user) {
       navigate("/login");
       return;
     }
-    // Load applications from localStorage
-    const stored = JSON.parse(localStorage.getItem("govconnectApplications")) || [];
-    setApplications(stored);
+    fetchApplications();
   }, []);
+
+  const fetchApplications = async () => {
+    try {
+      const res = await fetch(`${API_URL}/api/applications`, {
+        headers: {
+          "Authorization": `Bearer ${getToken()}`,
+        },
+      });
+      const data = await res.json();
+      setApplications(data);
+    } catch (err) {
+      console.error("Failed to fetch applications:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
