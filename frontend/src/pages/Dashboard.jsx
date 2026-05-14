@@ -9,17 +9,17 @@ function Dashboard() {
 
   const [applications, setApplications] = useState([]);
   const [loading, setLoading] = useState(true);
-
-  const user = getUser();
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
-    if (!user) {
+    const currentUser = getUser();
+    if (!currentUser) {
       navigate("/login");
       return;
     }
-
+    setUser(currentUser);
     fetchApplications();
-  }, []);
+  }, [navigate]);
 
   const fetchApplications = async () => {
     try {
@@ -29,13 +29,14 @@ function Dashboard() {
         },
       });
 
-      const data = await res.json();
-
-      if (Array.isArray(data)) {
-        setApplications(data);
-      } else {
-        setApplications([]);
+      if (res.status === 401) {
+        logout();
+        navigate("/login");
+        return;
       }
+
+      const data = await res.json();
+      setApplications(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error("Failed to fetch applications:", err);
       setApplications([]);
@@ -52,19 +53,19 @@ function Dashboard() {
   const totalApplications = applications.length;
 
   const submittedApplications = applications.filter(
-    (app) => app.status === "Submitted"
+    (app) => app.status?.toLowerCase() === "submitted"
   ).length;
 
   const approvedApplications = applications.filter(
-    (app) => app.status === "Approved"
+    (app) => app.status?.toLowerCase() === "approved"
   ).length;
 
-  const latestApplication = applications[0];
+  const latestApplication = [...applications].sort(
+    (a, b) => new Date(b.submitted_on) - new Date(a.submitted_on)
+  )[0];
 
   const userName = user?.fullName || "Citizen User";
-
-  const userState =
-    user?.state || latestApplication?.state || "India";
+  const userState = user?.state || latestApplication?.state || "India";
 
   const recommendedSchemes = [
     {
@@ -92,28 +93,47 @@ function Dashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#050816] text-white">
-        Loading dashboard...
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-sky-100 via-violet-50 to-rose-50">
+        <div className="text-center">
+          <div className="w-10 h-10 border-4 border-cyan-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-gray-500">Loading dashboard...</p>
+        </div>
       </div>
     );
   }
 
+  if (!user) return null;
+
   return (
-    <div className="min-h-screen bg-[#050816] text-white relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-sky-100 via-violet-50 to-rose-50 text-gray-900 overflow-hidden relative">
+
       {/* Background blobs */}
       <motion.div
-        animate={{ x: [0, 80, 0], y: [0, 50, 0] }}
-        transition={{ duration: 12, repeat: Infinity }}
-        className="absolute top-[-130px] left-[-130px] w-96 h-96 bg-cyan-500/20 blur-3xl rounded-full"
+        animate={{ x: [0, 80, 0], y: [0, 40, 0] }}
+        transition={{ duration: 10, repeat: Infinity }}
+        className="absolute top-[-120px] left-[-120px] w-96 h-96 bg-cyan-400/40 blur-3xl rounded-full"
       />
 
       <motion.div
-        animate={{ x: [0, -80, 0], y: [0, 70, 0] }}
+        animate={{ x: [0, -60, 0], y: [0, 70, 0] }}
+        transition={{ duration: 12, repeat: Infinity }}
+        className="absolute bottom-[-120px] right-[-120px] w-96 h-96 bg-violet-400/40 blur-3xl rounded-full"
+      />
+
+      <motion.div
+        animate={{ x: [0, 50, 0], y: [0, -40, 0] }}
         transition={{ duration: 14, repeat: Infinity }}
-        className="absolute bottom-[-140px] right-[-130px] w-96 h-96 bg-purple-600/25 blur-3xl rounded-full"
+        className="absolute top-[30%] right-[10%] w-72 h-72 bg-pink-300/30 blur-3xl rounded-full"
+      />
+
+      <motion.div
+        animate={{ x: [0, -40, 0], y: [0, 50, 0] }}
+        transition={{ duration: 11, repeat: Infinity }}
+        className="absolute bottom-[20%] left-[5%] w-64 h-64 bg-emerald-300/30 blur-3xl rounded-full"
       />
 
       <div className="relative z-10 px-6 sm:px-10 lg:px-14 py-10">
+
         {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: 35 }}
@@ -123,10 +143,12 @@ function Dashboard() {
           <div>
             <h1 className="text-4xl sm:text-5xl font-extrabold">
               Welcome,{" "}
-              <span className="text-cyan-400">{userName}</span>
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-500 via-blue-500 to-violet-600">
+                {userName}
+              </span>
             </h1>
 
-            <p className="text-gray-400 mt-3 max-w-2xl">
+            <p className="text-gray-500 mt-3 max-w-2xl">
               Your personalized government scheme dashboard.
             </p>
           </div>
@@ -134,21 +156,21 @@ function Dashboard() {
           <div className="flex gap-3 flex-wrap">
             <button
               onClick={() => navigate("/")}
-              className="px-5 py-3 rounded-lg bg-white/5 border border-white/10 hover:bg-white/10 transition"
+              className="px-5 py-3 rounded-xl bg-white/70 border border-cyan-100 hover:bg-cyan-50 transition font-medium text-gray-700 shadow-md"
             >
               Browse Schemes
             </button>
 
             <button
               onClick={() => navigate("/my-applications")}
-              className="px-5 py-3 rounded-lg bg-gradient-to-r from-cyan-500 to-purple-600 font-semibold"
+              className="px-5 py-3 rounded-xl bg-gradient-to-r from-cyan-500 via-blue-500 to-violet-600 text-white font-semibold shadow-lg hover:shadow-cyan-200"
             >
               My Applications
             </button>
 
             <button
               onClick={handleLogout}
-              className="px-5 py-3 rounded-lg bg-red-500/20 border border-red-500/30 hover:bg-red-500/30 text-red-400 transition font-semibold"
+              className="px-5 py-3 rounded-xl bg-gradient-to-r from-rose-400 to-red-500 text-white font-semibold shadow-lg hover:shadow-red-200"
             >
               Logout
             </button>
@@ -188,124 +210,132 @@ function Dashboard() {
               initial={{ opacity: 0, y: 35 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.1 }}
-              className="bg-[#0b1020]/90 border border-white/10 rounded-2xl p-6 backdrop-blur-2xl shadow-2xl"
+              whileHover={{ y: -5, scale: 1.02 }}
+              className="bg-white/80 backdrop-blur-2xl border border-white/70 rounded-2xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300"
             >
               <div
                 className={`w-14 h-1 rounded-full bg-gradient-to-r ${item.color} mb-5`}
               />
 
-              <p className="text-sm text-gray-400">{item.title}</p>
+              <p className="text-sm text-gray-500">{item.title}</p>
 
-              <h2 className="text-3xl font-bold mt-2">
+              <h2 className="text-3xl font-bold mt-2 text-gray-800">
                 {item.value}
               </h2>
 
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-gray-400 mt-2">
                 {item.detail}
               </p>
             </motion.div>
           ))}
         </div>
 
-        {/* Latest Application */}
+        {/* Latest Application + Profile */}
         <div className="grid xl:grid-cols-[1.4fr_1fr] gap-6 mt-8">
+
+          {/* Latest Application */}
           <motion.div
             initial={{ opacity: 0, x: -35 }}
             animate={{ opacity: 1, x: 0 }}
-            className="bg-[#0b1020]/90 border border-white/10 rounded-2xl p-6"
+            className="bg-white/80 backdrop-blur-2xl border border-white/70 rounded-2xl p-6 shadow-xl"
           >
-            <h2 className="text-2xl font-bold">
+            <h2 className="text-2xl font-bold text-gray-800">
               Latest Application
             </h2>
 
             {latestApplication ? (
-              <div className="mt-6 bg-white/5 border border-white/10 rounded-xl p-5">
+              <div className="mt-6 bg-gradient-to-br from-white/90 to-violet-50 border border-violet-100 shadow-md rounded-xl p-5">
+
                 <div className="flex justify-between gap-4 flex-wrap">
                   <div>
-                    <p className="text-xs text-cyan-400 font-semibold">
+                    <p className="text-xs text-cyan-500 font-semibold">
                       {latestApplication.category}
                     </p>
 
-                    <h3 className="text-xl font-bold mt-2">
+                    <h3 className="text-xl font-bold mt-2 text-gray-800">
                       {latestApplication.scheme_name}
                     </h3>
 
-                    <p className="text-sm text-gray-400 mt-1">
+                    <p className="text-sm text-gray-500 mt-1">
                       {latestApplication.ministry}
                     </p>
                   </div>
 
-                  <span className="text-sm font-bold text-cyan-400">
+                  <span
+                    className={`text-sm font-bold px-3 py-1 rounded-full h-fit ${
+                      latestApplication.status?.toLowerCase() === "approved"
+                        ? "bg-emerald-100 text-emerald-600"
+                        : latestApplication.status?.toLowerCase() === "rejected"
+                        ? "bg-red-100 text-red-500"
+                        : "bg-cyan-100 text-cyan-600"
+                    }`}
+                  >
                     {latestApplication.status}
                   </span>
                 </div>
 
                 <div className="grid sm:grid-cols-3 gap-3 mt-5">
-                  <div className="bg-[#111827] rounded-lg p-3 border border-white/10">
-                    <p className="text-xs text-gray-400">
-                      Application ID
-                    </p>
 
-                    <h4 className="text-sm font-bold mt-1">
+                  <div className="bg-gradient-to-br from-cyan-50 to-violet-50 rounded-lg p-3 border border-white">
+                    <p className="text-xs text-gray-500">Application ID</p>
+                    <h4 className="text-sm font-bold mt-1 text-gray-800">
                       {latestApplication.application_id}
                     </h4>
                   </div>
 
-                  <div className="bg-[#111827] rounded-lg p-3 border border-white/10">
-                    <p className="text-xs text-gray-400">
-                      Annual Income
-                    </p>
-
-                    <h4 className="text-sm font-bold mt-1">
+                  <div className="bg-gradient-to-br from-cyan-50 to-violet-50 rounded-lg p-3 border border-white">
+                    <p className="text-xs text-gray-500">Annual Income</p>
+                    <h4 className="text-sm font-bold mt-1 text-gray-800">
                       Rs. {latestApplication.income_limit}
                     </h4>
                   </div>
 
-                  <div className="bg-[#111827] rounded-lg p-3 border border-white/10">
-                    <p className="text-xs text-gray-400">
-                      Submitted On
-                    </p>
-
-                    <h4 className="text-sm font-bold mt-1">
-                      {new Date(
-                        latestApplication.submitted_on
-                      ).toLocaleDateString()}
+                  <div className="bg-gradient-to-br from-cyan-50 to-violet-50 rounded-lg p-3 border border-white">
+                    <p className="text-xs text-gray-500">Submitted On</p>
+                    <h4 className="text-sm font-bold mt-1 text-gray-800">
+                      {latestApplication.submitted_on
+                        ? new Date(
+                            latestApplication.submitted_on
+                          ).toLocaleDateString()
+                        : "N/A"}
                     </h4>
                   </div>
                 </div>
 
-                <div className="mt-6">
-                  <p className="text-sm font-semibold mb-3">
-                    Next Step
-                  </p>
+                {latestApplication.next_step && (
+                  <div className="mt-6">
+                    <p className="text-sm font-semibold mb-3 text-gray-700">
+                      Next Step
+                    </p>
 
-                  <div className="w-full h-3 bg-gray-800 rounded-full overflow-hidden">
-                    <motion.div
-                      initial={{ width: 0 }}
-                      animate={{ width: "45%" }}
-                      transition={{ duration: 1 }}
-                      className="h-full bg-gradient-to-r from-cyan-400 to-purple-500"
-                    />
+                    <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                      <motion.div
+                        initial={{ width: 0 }}
+                        animate={{ width: "45%" }}
+                        transition={{ duration: 1 }}
+                        className="h-full bg-gradient-to-r from-cyan-400 to-purple-500"
+                      />
+                    </div>
+
+                    <p className="text-xs text-gray-500 mt-3">
+                      {latestApplication.next_step}
+                    </p>
                   </div>
-
-                  <p className="text-xs text-gray-400 mt-3">
-                    {latestApplication.next_step}
-                  </p>
-                </div>
+                )}
               </div>
             ) : (
-              <div className="mt-6 bg-white/5 border border-white/10 rounded-xl p-8 text-center">
-                <h3 className="text-xl font-bold">
+              <div className="mt-6 bg-white/60 border border-violet-100 rounded-xl p-8 text-center">
+                <h3 className="text-xl font-bold text-gray-800">
                   No Applications Found
                 </h3>
 
-                <p className="text-gray-400 mt-2">
+                <p className="text-gray-500 mt-2">
                   Apply for a scheme to see status updates.
                 </p>
 
                 <button
                   onClick={() => navigate("/")}
-                  className="mt-5 px-6 py-3 rounded-lg bg-gradient-to-r from-cyan-500 to-purple-600 font-semibold"
+                  className="mt-5 px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-500 to-violet-600 text-white font-semibold shadow-lg"
                 >
                   Apply Now
                 </button>
@@ -317,48 +347,45 @@ function Dashboard() {
           <motion.div
             initial={{ opacity: 0, x: 35 }}
             animate={{ opacity: 1, x: 0 }}
-            className="bg-[#0b1020]/90 border border-white/10 rounded-2xl p-6"
+            className="bg-white/80 backdrop-blur-2xl border border-white/70 rounded-2xl p-6 shadow-xl"
           >
-            <h2 className="text-2xl font-bold">User Profile</h2>
+            <h2 className="text-2xl font-bold text-gray-800">
+              User Profile
+            </h2>
 
             <div className="flex items-center gap-4 mt-6">
-              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-400 to-purple-600 flex items-center justify-center text-2xl font-bold">
+              <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-cyan-400 to-violet-600 flex items-center justify-center text-2xl font-bold text-white shadow-lg">
                 {userName.charAt(0).toUpperCase()}
               </div>
 
               <div>
-                <h3 className="font-semibold">{userName}</h3>
+                <h3 className="font-semibold text-gray-800">
+                  {userName}
+                </h3>
 
-                <p className="text-sm text-gray-400">
+                <p className="text-sm text-gray-500">
                   {userState}, India
                 </p>
               </div>
             </div>
 
             <div className="mt-6 space-y-3">
-              <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-                <p className="text-xs text-gray-400">Email</p>
+              {[
+                { label: "Email", value: user?.email },
+                { label: "Role", value: user?.role },
+                { label: "User ID", value: user?.userId },
+              ].map((item) => (
+                <div
+                  key={item.label}
+                  className="bg-gradient-to-br from-white to-violet-50 border border-violet-100 rounded-lg p-4 shadow-sm"
+                >
+                  <p className="text-xs text-gray-500">{item.label}</p>
 
-                <h3 className="text-sm font-semibold mt-1">
-                  {user?.email}
-                </h3>
-              </div>
-
-              <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-                <p className="text-xs text-gray-400">Role</p>
-
-                <h3 className="text-sm font-semibold mt-1 capitalize">
-                  {user?.role}
-                </h3>
-              </div>
-
-              <div className="bg-white/5 border border-white/10 rounded-lg p-4">
-                <p className="text-xs text-gray-400">User ID</p>
-
-                <h3 className="text-sm font-semibold mt-1">
-                  {user?.userId}
-                </h3>
-              </div>
+                  <h3 className="text-sm font-semibold mt-1 capitalize text-gray-800">
+                    {item.value || "N/A"}
+                  </h3>
+                </div>
+              ))}
             </div>
           </motion.div>
         </div>
@@ -367,9 +394,9 @@ function Dashboard() {
         <motion.div
           initial={{ opacity: 0, y: 35 }}
           animate={{ opacity: 1, y: 0 }}
-          className="bg-[#0b1020]/90 border border-white/10 rounded-2xl p-6 mt-8"
+          className="bg-white/80 backdrop-blur-2xl border border-white/70 rounded-2xl p-6 mt-8 shadow-xl"
         >
-          <h2 className="text-2xl font-bold">
+          <h2 className="text-2xl font-bold text-gray-800">
             Recommended Schemes
           </h2>
 
@@ -380,30 +407,30 @@ function Dashboard() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: index * 0.1 }}
-                className="bg-white/5 border border-white/10 rounded-xl p-4"
+                whileHover={{ scale: 1.01 }}
+                className="bg-gradient-to-br from-white/90 to-violet-50 border border-violet-100 shadow-md rounded-xl p-4"
               >
                 <div className="flex justify-between gap-4">
                   <div>
-                    <h3 className="font-semibold">
+                    <h3 className="font-semibold text-gray-800">
                       {scheme.name}
                     </h3>
 
-                    <p className="text-xs text-gray-400 mt-1">
-                      {scheme.category} • Income limit{" "}
-                      {scheme.incomeLimit}
+                    <p className="text-xs text-gray-500 mt-1">
+                      {scheme.category} • Income limit {scheme.incomeLimit}
                     </p>
                   </div>
 
-                  <span className="text-sm font-bold text-cyan-400">
+                  <span className="text-sm font-bold text-cyan-500">
                     {scheme.match}
                   </span>
                 </div>
 
-                <div className="w-full h-2 bg-gray-800 rounded-full mt-4 overflow-hidden">
+                <div className="w-full h-2 bg-gray-200 rounded-full mt-4 overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: scheme.match }}
-                    transition={{ duration: 1 }}
+                    transition={{ duration: 1, delay: index * 0.1 }}
                     className={`h-full bg-gradient-to-r ${scheme.color}`}
                   />
                 </div>
@@ -411,6 +438,7 @@ function Dashboard() {
             ))}
           </div>
         </motion.div>
+
       </div>
     </div>
   );
