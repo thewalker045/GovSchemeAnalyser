@@ -27,4 +27,4 @@ function verifyAdmin(req, res, next) {
   });
 }
 
-module.exports = { verifyToken, verifyAdmin };
+module.exports = { verifyToken, verifyAdmin }; 

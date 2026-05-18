@@ -1,145 +1,53 @@
 const express = require("express");
+const router = express.Router();
 const multer = require("multer");
 const path = require("path");
+const fs = require("fs");
+const { verifyToken } = require("../middleware/authMiddleware");
+const {
+  uploadDocument,
+  getDocuments,
+  deleteDocument,
+} = require("../controllers/documentController");
 
-const pool = require("../config/db");
+// Ensure uploads folder exists
+const uploadDir = path.join(__dirname, "../uploads");
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
-const router = express.Router();
-
-// STORAGE CONFIG
+// Multer config — store on disk
 const storage = multer.diskStorage({
-
   destination: (req, file, cb) => {
-
-    cb(null, "uploads/");
+    cb(null, uploadDir);
   },
-
   filename: (req, file, cb) => {
-
-    const uniqueName =
-      Date.now() +
-      "-" +
-      file.originalname;
-
-    cb(null, uniqueName);
+    const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    const ext = path.extname(file.originalname);
+    cb(null, `${unique}${ext}`);
   },
 });
 
-// FILE FILTER
-const fileFilter = (
-  req,
-  file,
-  cb
-) => {
-
-  const allowedTypes = [
-    "application/pdf",
-    "image/jpeg",
-    "image/png",
-    "image/jpg",
-  ];
-
-  if (
-    allowedTypes.includes(file.mimetype)
-  ) {
-
+// Allow only PDF, JPG, PNG
+const fileFilter = (req, file, cb) => {
+  const allowed = [".pdf", ".jpg", ".jpeg", ".png"];
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (allowed.includes(ext)) {
     cb(null, true);
-
   } else {
-
-    cb(
-      new Error(
-        "Only PDF and image files allowed"
-      ),
-      false
-    );
+    cb(new Error("Only PDF, JPG, and PNG files are allowed"), false);
   }
 };
 
-// MULTER
 const upload = multer({
   storage,
   fileFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB max
 });
 
-// UPLOAD ROUTE
-router.post(
-  "/upload-document/:applicationId",
-
-  upload.single("document"),
-
-  async (req, res) => {
-
-    try {
-
-      const { applicationId } =
-        req.params;
-
-      if (!req.file) {
-
-        return res.status(400).json({
-          message: "No file uploaded",
-        });
-      }
-
-      const documentName =
-        req.file.originalname;
-
-      const documentUrl =
-        `uploads/${req.file.filename}`;
-
-      // UPDATE APPLICATION
-      const result =
-        await pool.query(
-          `
-          UPDATE applications
-
-          SET
-            document_name = $1,
-            document_url = $2
-
-          WHERE application_id = $3
-
-          RETURNING *
-          `,
-          [
-            documentName,
-            documentUrl,
-            applicationId,
-          ]
-        );
-
-      if (
-        result.rows.length === 0
-      ) {
-
-        return res.status(404).json({
-          message:
-            "Application not found",
-        });
-      }
-
-      res.status(200).json({
-        message:
-          "Document uploaded successfully",
-
-        application:
-          result.rows[0],
-      });
-
-    } catch (err) {
-
-      console.log(
-        "Upload Error:",
-        err
-      );
-
-      res.status(500).json({
-        message: "Upload failed",
-        error: err.message,
-      });
-    }
-  }
-);
+// Routes
+router.post("/", verifyToken, upload.single("file"), uploadDocument);
+router.get("/:applicationId", verifyToken, getDocuments);
+router.delete("/:uploadId", verifyToken, deleteDocument);
 
 module.exports = router;

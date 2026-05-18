@@ -5,8 +5,10 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Dashboard from "./pages/Dashboard";
 import Home from "./pages/Home";
-import MyApplications from "./pages/MyApplications";
+MyApplications
+
 import AdminDashboard from "./pages/AdminDashboard";
+import MyApplications from "./pages/MyApplications";
 
 function App() {
   return (
@@ -30,7 +32,7 @@ function App() {
           </ProtectedRoute>
         } />
 
-        <Route path="/my-applications" element={
+         <Route path="/my-applications" element={
           <ProtectedRoute>
             <MyApplications />
           </ProtectedRoute>

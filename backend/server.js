@@ -8,16 +8,10 @@ require("dotenv").config();
 
 // ROUTES
 const authRoutes = require("./routes/authRoutes");
-
 const schemeRoutes = require("./routes/schemeRoutes");
-
 const applicationRoutes = require("./routes/applicationRoutes");
-
 const adminRoutes = require("./routes/adminRoutes");
-
-const documentRoutes = require(
-  "./routes/documentRoutes"
-);
+const documentRoutes = require("./routes/documentRoutes");
 
 const app = express();
 
@@ -31,7 +25,6 @@ app.use(
       "http://localhost:3000",
       "http://127.0.0.1:3000",
     ],
-
     credentials: true,
   })
 );
@@ -42,43 +35,24 @@ app.use(express.json());
 // STATIC UPLOADS
 app.use(
   "/uploads",
-
-  express.static(
-    path.join(__dirname, "uploads")
-  )
+  express.static(path.join(__dirname, "uploads"))
 );
 
 // ROUTES
 app.use("/api/auth", authRoutes);
-
 app.use("/api/schemes", schemeRoutes);
-
-app.use(
-  "/api/applications",
-  applicationRoutes
-);
-
+app.use("/api/applications", applicationRoutes);
 app.use("/api/admin", adminRoutes);
-
-// DOCUMENT ROUTES
-app.use("/api", documentRoutes);
+app.use("/api/documents", documentRoutes); // ✅ fixed
 
 // HEALTH CHECK
 app.get("/", (req, res) => {
-
-  res.json({
-    message:
-      "GovConnect API is running",
-  });
+  res.json({ message: "GovConnect API is running" });
 });
 
 // SERVER
-const PORT =
-  process.env.PORT || 5000;
+const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-
-  console.log(
-    `Server running on http://localhost:${PORT}`
-  );
+  console.log(`Server running on http://localhost:${PORT}`);
 });
